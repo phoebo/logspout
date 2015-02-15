@@ -116,6 +116,22 @@ func rfc5424Streamer(target Target, types []string, logstream chan *Log) {
 	}
 }
 
+func wsStreamer(target Target, types []string, logstream chan *Log) {
+	typestr := "," + strings.Join(types, ",") + ","
+
+	ws, err := websocket.Dial(target.Desc, "", "http://" + target.Addr)
+	assert(err, "websocket dial")
+
+	for logline := range logstream {
+		if typestr != ",," && !strings.Contains(typestr, logline.Type) {
+			continue
+		}
+
+		_, err := ws.Write([]byte(append(marshal(logline), '\n')))
+		assert(err, "websocket write")
+	}
+}
+
 func websocketStreamer(w http.ResponseWriter, req *http.Request, logstream chan *Log, closer chan bool) {
 	websocket.Handler(func(conn *websocket.Conn) {
 		for logline := range logstream {
@@ -201,6 +217,7 @@ func main() {
 				Target: Target{
 					Type: u.Scheme,
 					Addr: u.Host,
+					Desc: route,
 				},
 			}
 			if u.RawQuery != "" {
