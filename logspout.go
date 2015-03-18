@@ -200,10 +200,13 @@ func main() {
 	port := getopt("PORT", "8000")
 	endpoint := getopt("DOCKER_HOST", "unix:///tmp/docker.sock")
 	routespath := getopt("ROUTESPATH", "/mnt/routes")
+	mesosHost := getopt("MESOS_HOST", "127.0.0.1:5051")
 
 	client, err := docker.NewClient(endpoint)
 	assert(err, "docker")
-	attacher := NewAttachManager(client)
+
+	translator := NewMesosTranslator(mesosHost)
+	attacher := NewAttachManager(client, translator)
 	router := NewRouteManager(attacher)
 
 	if len(os.Args) > 1 {

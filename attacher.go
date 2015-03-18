@@ -15,13 +15,15 @@ type AttachManager struct {
 	attached map[string]*LogPump
 	channels map[chan *AttachEvent]struct{}
 	client   *docker.Client
+	translator *MesosTranslator
 }
 
-func NewAttachManager(client *docker.Client) *AttachManager {
+func NewAttachManager(client *docker.Client, translator *MesosTranslator) *AttachManager {
 	m := &AttachManager{
 		attached: make(map[string]*LogPump),
 		channels: make(map[chan *AttachEvent]struct{}),
 		client:   client,
+		translator: translator,
 	}
 	containers, err := client.ListContainers(docker.ListContainersOptions{})
 	assert(err, "attacher")
@@ -76,7 +78,7 @@ func (m *AttachManager) attach(id string) {
 	_, ok := <-success
 	if ok {
 		m.Lock()
-		m.attached[id] = NewLogPump(outrd, errrd, id, name)
+		m.attached[id] = NewLogPump(outrd, errrd, id, m.translator.translate(name))
 		m.Unlock()
 		success <- struct{}{}
 		m.send(&AttachEvent{ID: id, Name: name, Type: "attach"})
