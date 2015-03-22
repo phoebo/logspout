@@ -156,6 +156,7 @@ type LogPump struct {
 	sync.Mutex
 	ID       string
 	Name     string
+	Counter  int
 	channels map[chan *Log]struct{}
 }
 
@@ -164,6 +165,7 @@ func NewLogPump(stdout, stderr io.Reader, id, name string) *LogPump {
 		ID:       id,
 		Name:     name,
 		channels: make(map[chan *Log]struct{}),
+		Counter:  0,
 	}
 	pump := func(typ string, source io.Reader) {
 		buf := bufio.NewReader(source)
@@ -175,12 +177,16 @@ func NewLogPump(stdout, stderr io.Reader, id, name string) *LogPump {
 				}
 				return
 			}
+
 			obj.send(&Log{
 				Data: strings.TrimSuffix(string(data), "\n"),
-				ID:   id,
+//				ID:   id,
 				Name: name,
 				Type: typ,
+				Counter: obj.Counter,
 			})
+
+			obj.Counter = (obj.Counter + 1) % 256
 		}
 	}
 	go pump("stdout", stdout)

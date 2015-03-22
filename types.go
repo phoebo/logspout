@@ -14,8 +14,9 @@ type AttachEvent struct {
 }
 
 type Log struct {
-	ID   string `json:"id"`
+//	ID   string `json:"id"`
 	Name string `json:"name"`
+	Counter int `json:"counter"`
 	Type string `json:"type"`
 	Data string `json:"data"`
 }
