@@ -13,6 +13,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"regexp"
+	"bufio"
+	"encoding/hex"
 
 	"code.google.com/p/go.net/websocket"
 	"github.com/fsouza/go-dockerclient"
@@ -190,6 +193,26 @@ func httpStreamer(w http.ResponseWriter, req *http.Request, logstream chan *Log,
 	}
 }
 
+func gatewayIp() string {
+	gwIp := "127.0.0.1"
+
+	inFile, _ := os.Open("/proc/net/route")
+	defer inFile.Close()
+	scanner := bufio.NewScanner(inFile)
+	scanner.Split(bufio.ScanLines)
+	rx := regexp.MustCompile(`(?i)^\S+\s+00000000\s+(\S{8})`)
+	for scanner.Scan() {
+		line := scanner.Text()
+		matched := rx.FindStringSubmatch(line)
+		if(len(matched) == 2) {
+			bytes, _ := hex.DecodeString(matched[1])
+			gwIp = fmt.Sprintf("%d.%d.%d.%d", bytes[3], bytes[2], bytes[1], bytes[0])
+		}
+	}
+
+	return gwIp
+}
+
 func main() {
 	if len(os.Args) == 2 && os.Args[1] == "--version" {
 		fmt.Println(Version)
@@ -200,7 +223,7 @@ func main() {
 	port := getopt("PORT", "8000")
 	endpoint := getopt("DOCKER_HOST", "unix:///tmp/docker.sock")
 	routespath := getopt("ROUTESPATH", "/mnt/routes")
-	mesosHost := getopt("MESOS_HOST", "127.0.0.1:5051")
+	mesosHost := getopt("MESOS_HOST", gatewayIp() + ":5051")
 
 	client, err := docker.NewClient(endpoint)
 	assert(err, "docker")
